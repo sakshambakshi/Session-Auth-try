@@ -1,0 +1,135 @@
+const express = require('express')
+    , session = require('express-session')
+    , volleyball = require('volleyball')
+    , app = express()
+    , port = 3000 || process.env.PORT
+
+app.use(volleyball)
+
+app.use(express.json());
+app.use(express.urlencoded({
+    extended: true 
+}))
+// session 
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: false,
+    name:"sid",
+    cookie: { 
+        sameSite: true
+     }
+  }))
+
+//   Redirect login 
+const redirectLogin = (req , res , next) =>{
+    if(!req.session.userId){
+        res.redirect('./login')
+    }
+    next()
+}
+
+const redirectHome = (req , res , next) =>{
+    if(req.session.userId){
+        console.log('Here here')
+        res.redirect('/home')
+    }
+    
+}
+
+
+const users = [
+    { id: 1 , name: "Alex" , email: "alex@gmail.com" , password: "secret"},
+    { id: 2 , name: "Sam" , email: "sam@gmail.com" , password: "secret1"},
+    { id: 3 , name: "David" , email: "david@gmail.com" , password: "secret2"}
+]
+
+app.get('/' , (req , res )=>{
+    const {userId} = req.session
+    
+    console.log(req.session)
+    res.send(`
+        <html>
+            <head>
+                <title>/Route</title>
+            </head>
+            <body>
+                ${!userId ?
+                `<a href="/login">Login</a>
+                <a href="/register">Register</a>
+                `
+                :
+                `<a href="/home">Home</a>
+                <form method="POST" action="/logout">
+                    <button>Logout</button>
+                </form>`
+                }
+            </body>
+        </html>
+    `)
+})
+
+app.get('/home' ,redirectLogin ,  (req , res , next) =>{
+    res.send(`
+        <h1>Home</h1>
+        <ul>
+            <li>id: </li>
+            <li>Name</li>
+            <li>Email </li>
+        </ul>
+    `)
+})
+
+
+
+app.get('/register'  , redirectHome , (req , res , next) =>{
+    res.send(`
+    <form method="POST" action="/register">
+        <input type="text" placeholder="Name" name="name" required>
+        <input type="email" placeholder="Email" name="email" required>
+        <input type="password" placeholder="Password" name="password" required>
+        <input type="submit" >
+    </form>
+    <a href="/login">Login</a>
+    `)
+})
+
+app.get('/login'  ,redirectHome , (req , res , next) =>{
+    console.log('Inside login')
+    res.send(`
+    <form method="POST" action="/login">
+        <input type="email" placeholder="Email" name="email" required>
+        <input type="password" placeholder="Password" name="password" required>
+        <input type="submit" >
+    </form>
+    <a href="/register">Register</a>
+    `)
+})
+app.post('/register' ,(req , res , next) =>{
+    
+})
+app.post('/login' ,(req , res , next) =>{
+    const { email , password } = req.body
+    let user = users.find(u =>{
+        if (u.email === email)
+            if(u.password === password) {
+                req.session.userId = u.id
+                if(req.session.userId){
+                    res.redirect('/home')
+                }
+            }
+            else{
+                return res.send('Wrong Password')
+            }
+    })
+    console.log(user)
+    
+})
+
+app.post('/logout' , (req , res , next) => {
+
+})
+
+app.listen(port , ()=>{
+    console.log(`listening you at http://localhost:${port} `)
+})
